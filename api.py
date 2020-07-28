@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from config.connection import db
+from config.connection import db, res
 
 app = Flask(__name__)
 
@@ -73,13 +73,13 @@ def get_employee_customers(emp_num):
     for item in description:
         header_data.append(item[0])
     new_data = []
-    for res in result:
-        # if isinstance(res[-1], float):
-        #     res[-1] = str(res[-1])
-        new_data.append(dict(zip(tuple(header_data), res)))
-    print(new_data)
-    return "ok"
-    #return jsonify(new_data)
+    for resp in result:
+        deref_decimal: str = str(resp[-1])
+        resp: list = list(resp[:-1])
+        resp.append(deref_decimal)
+        new_data.append(dict(zip(header_data, resp)))
+
+    return jsonify(res)
     #final_data = dict(zip(tuple(header_data), result))
     #print(final_data)
     #return "heleo"

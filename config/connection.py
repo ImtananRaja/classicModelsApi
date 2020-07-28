@@ -13,15 +13,11 @@ def _connect() -> object:
     return c
 
 
-def _some(param1: int) -> str:
-    """
-
-    :type param1: int
-    """
-    param2 = param1 + 2
+def _something(some_param: int) -> str:
+    param2 = some_param + 2
     return "hello"
 
 
-res: str = _some(param1=2)
+hello_string: str = _something(2)
 
 db: object = _connect()
