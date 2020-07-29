@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from config.connection import db, res
+from config.connection import db, hello_string
 
 app = Flask(__name__)
 
@@ -13,16 +13,116 @@ def home():
     return jsonify("welcome to here")
 
 
+# get all offices
+# get all orders
+# get all orderdetails
+# get all payments
+# get all productlines
+# get all customers
+
 @app.route('/api/employees')
-def employees():
-    "This will be the simple documentation for the api"
+def employees() -> list:
+    """Getting all the employees details
+    :return: json object of employees
+    """
     sql = "SELECT * FROM employees"
     db.execute(sql)
-    res = db.fetchall()
-    newRes = []
-    for item in res:
-        newRes.append(item)
-    return jsonify(newRes)
+    employees_tuple: tuple = db.fetchall()
+
+    header_data = []
+    for header in db.description:
+        print(header[0])
+        header_data.append(header[0])
+
+    new_data = []
+    for employee in employees_tuple:
+        new_data.append(dict(zip(header_data, employee)))
+
+    return jsonify(new_data)
+
+
+@app.route('/api/offices')
+def offices() -> list:
+    sql = "SELECT * FROM offices"
+    db.execute(sql)
+    offices_tuple: tuple = db.fetchall()
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    new_data = []
+    for office in offices_tuple:
+        new_data.append(dict(zip(header_data, office)))
+
+    return jsonify(new_data)
+
+
+@app.route('/api/products')
+def products() -> list:
+    sql = "SELECT * FROM products"
+    db.execute(sql)
+    products_tuple: tuple = db.fetchall()
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    new_data = []
+    for product in products_tuple:
+        new_data.append(dict(zip(header_data, product)))
+
+    return jsonify(new_data)
+
+
+@app.route('/api/customers')
+def customers() -> list:
+    sql = "SELECT * FROM customers"
+    db.execute(sql)
+    customers_tuple: tuple = db.fetchall()
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    new_data = []
+    for customer in customers_tuple:
+        new_data.append(dict(zip(header_data, customer)))
+
+    return jsonify(new_data)
+
+
+@app.route('/api/orders')
+def orders() -> list:
+    sql = "SELECT * FROM orders"
+    db.execute(sql)
+    orders_tuple: tuple = db.fetchall()
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    new_data = []
+    for order in orders_tuple:
+        new_data.append(dict(zip(header_data, order)))
+
+    return jsonify(new_data)
+
+
+@app.route('/api/order/<int:order_num>')
+def order_det(order_num) -> list:
+    sql = """
+    SELECT orderdetails.* 
+    FROM orderdetails
+    LEFT JOIN orders ON orders.orderNumber = orderdetails.orderNumber
+    LEFT JOIN 
+    WHERE orderdetails.orderNumber = %s
+    """
+    db.execute(sql, order_num)
+    order_details_tuple: tuple = db.fetchall()
+    print(order_details_tuple)
+
+    return jsonify("Someting")
 
 
 """
@@ -37,16 +137,19 @@ Get Employee details
 
 
 @app.route('/api/employee/<int:emp_num>')
-def get_employee_det(emp_num):
+def get_employee_det(emp_num) -> dict:
+    """
+    returns json object of employee details
+    :param emp_num: int
+    :return: json object of employee details
+    """
     sql = "SELECT * FROM employees WHERE employeeNumber = %s"
     db.execute(sql, emp_num)
-    result = db.fetchone()
-    description = db.description
+    employee_details: tuple = db.fetchone()
     header_data = []
-    for item in description:
-        header_data.append(item[0])
-    final_data = dict(zip(tuple(header_data), result))
-    print(final_data)
+    for header in db.description:
+        header_data.append(header[0])
+    final_data = dict(zip(tuple(header_data), employee_details))
     return jsonify(final_data)
 
 
@@ -59,8 +162,10 @@ Get all Customers for an Employee
 @returns:
 1) List of Customers details for the employee
 """
+
+
 @app.route('/api/employee/<int:emp_num>/customers')
-def get_employee_customers(emp_num):
+def get_employee_customers(emp_num) -> list:
     sql = """
     SELECT customers.* 
     FROM customers 
@@ -79,21 +184,7 @@ def get_employee_customers(emp_num):
         resp.append(deref_decimal)
         new_data.append(dict(zip(header_data, resp)))
 
-    return jsonify(res)
-    #final_data = dict(zip(tuple(header_data), result))
-    #print(final_data)
-    #return "heleo"
-
-
-# get all employees
-# get all offices
-# get all orders
-# get all orderdetails
-# get all payments
-# get all products
-# get all productlines
-# get all customers
-
+    return jsonify(new_data)
 
 # for a customer get all orders
 # for a given order get its details

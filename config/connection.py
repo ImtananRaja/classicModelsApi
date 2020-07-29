@@ -8,6 +8,7 @@ def _connect() -> object:
                                     user="api",
                                     password="password",
                                     database="classicmodels",
+                                    charset="utf8mb4",
                                     port=3307)
     c = database_conn.cursor()
     return c
