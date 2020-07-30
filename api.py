@@ -1,11 +1,16 @@
 from flask import Flask, jsonify
 from config.connection import db, hello_string
-
+import datetime
+import decimal
 app = Flask(__name__)
 
 """
-Painful learning
+Painful learning:
+
+TODO: factor out logic for dealing with dates and decimals and any other thing that may arise
+
 """
+
 
 
 @app.route('/')
@@ -110,19 +115,42 @@ def orders() -> list:
 
 
 @app.route('/api/order/<int:order_num>')
-def order_det(order_num) -> list:
+def order(order_num) -> dict:
+    sql = "SELECT * FROM orders WHERE orderNumber = %s"
+    db.execute(sql, order_num)
+    order_data: list = list(db.fetchone())
+
+    # basically convert datetime.date to human readable form
+    for index, item in enumerate(order_data):
+        if isinstance(item, datetime.date):
+            order_data[index]: str = item.strftime("%d/%m/%Y")
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    final_data = dict(zip(header_data, order_data))
+    return jsonify(final_data)
+
+
+@app.route('/api/order/<int:order_num>/details')
+def order_det(order_num) -> dict:
     sql = """
-    SELECT orderdetails.* 
-    FROM orderdetails
-    LEFT JOIN orders ON orders.orderNumber = orderdetails.orderNumber
-    LEFT JOIN 
-    WHERE orderdetails.orderNumber = %s
+    SELECT * FROM orderdetails WHERE orderNumber = %s
     """
     db.execute(sql, order_num)
-    order_details_tuple: tuple = db.fetchall()
-    print(order_details_tuple)
+    orders_det: list = list(db.fetchall())
 
-    return jsonify("Someting")
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    order_details = []
+    for order in orders_det:
+        order_details.append(dict(zip(header_data, order)))
+
+    return jsonify(order_details)
 
 
 """
@@ -172,19 +200,58 @@ def get_employee_customers(emp_num) -> list:
     LEFT JOIN employees ON salesRepEmployeeNumber = employees.employeeNumber
     WHERE employeeNumber = %s"""
     db.execute(sql, emp_num)
-    result = db.fetchall()
+    customers_data = list(db.fetchall())
     description = db.description
+
     header_data = []
     for item in description:
         header_data.append(item[0])
+
     new_data = []
-    for resp in result:
-        deref_decimal: str = str(resp[-1])
-        resp: list = list(resp[:-1])
-        resp.append(deref_decimal)
-        new_data.append(dict(zip(header_data, resp)))
+    for customer_list in customers_data:
+        customer_list = list(customer_list)
+        for index, item in enumerate(customer_list):
+            if isinstance(item, decimal.Decimal):
+                customer_list[index] = str(item)
+        new_data.append(dict(zip(header_data, customer_list)))
 
     return jsonify(new_data)
+
+
+@app.route('/api/customer/<int:customer_num>/orders')
+def get_customer_orders(customer_num) -> list:
+    """
+    Get all orders for an customer given a customer number
+    :params customer_num: int
+    :returns json list of dicts
+    """
+    sql = """
+    SELECT orders.* 
+    FROM orders 
+    LEFT JOIN customers ON customers.customerNumber = orders.customerNumber
+    WHERE customers.customerNumber = %s"""
+    db.execute(sql, customer_num)
+    customers_orders = list(db.fetchall())
+    description = db.description
+
+    header_data = []
+    for item in description:
+        header_data.append(item[0])
+
+    new_data = []
+    for order_list in customers_orders:
+        order_list: list = list(order_list)
+
+        for index, item in enumerate(order_list):
+            if isinstance(item, decimal.Decimal):
+                order_list[index]: str = str(item)
+            if isinstance(item, datetime.date):
+                order_list[index]: str = item.strftime("%d/%m/%Y")
+
+        new_data.append(dict(zip(header_data, order_list)))
+
+    return jsonify(new_data)
+
 
 # for a customer get all orders
 # for a given order get its details
