@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from config.connection import db, hello_string
 import datetime
 import decimal
+
 app = Flask(__name__)
 
 """
@@ -10,7 +11,6 @@ Painful learning:
 TODO: factor out logic for dealing with dates and decimals and any other thing that may arise
 
 """
-
 
 
 @app.route('/')
@@ -32,86 +32,102 @@ def employees() -> list:
     """
     sql = "SELECT * FROM employees"
     db.execute(sql)
-    employees_tuple: tuple = db.fetchall()
+    employees_list: list = list(db.fetchall())
 
     header_data = []
     for header in db.description:
-        print(header[0])
         header_data.append(header[0])
 
-    new_data = []
-    for employee in employees_tuple:
-        new_data.append(dict(zip(header_data, employee)))
+    all_employees_data = []
+    for employee in employees_list:
+        all_employees_data.append(dict(zip(header_data, employee)))
 
-    return jsonify(new_data)
+    return jsonify(all_employees_data)
 
 
 @app.route('/api/offices')
 def offices() -> list:
     sql = "SELECT * FROM offices"
     db.execute(sql)
-    offices_tuple: tuple = db.fetchall()
+    offices_list: list = list(db.fetchall())
 
     header_data = []
     for header in db.description:
         header_data.append(header[0])
 
-    new_data = []
-    for office in offices_tuple:
-        new_data.append(dict(zip(header_data, office)))
+    all_offices_data = []
+    for office in offices_list:
+        all_offices_data.append(dict(zip(header_data, office)))
 
-    return jsonify(new_data)
+    return jsonify(all_offices_data)
 
 
 @app.route('/api/products')
 def products() -> list:
     sql = "SELECT * FROM products"
     db.execute(sql)
-    products_tuple: tuple = db.fetchall()
+    products_list: list = list(db.fetchall())
 
     header_data = []
     for header in db.description:
         header_data.append(header[0])
 
-    new_data = []
-    for product in products_tuple:
-        new_data.append(dict(zip(header_data, product)))
+    all_products_data = []
+    for product in products_list:
+        all_products_data.append(dict(zip(header_data, product)))
 
-    return jsonify(new_data)
+    return jsonify(all_products_data)
+
+
+@app.route('/api/orderdetails')
+def order_details() -> list:
+    sql = "SELECT * FROM orderdetails"
+    db.execute(sql)
+    orders_list: list = list(db.fetchall())
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    all_orders_data = []
+    for order_detail in orders_list:
+        all_orders_data.append(dict(zip(header_data, order_detail)))
+
+    return jsonify(all_orders_data)
 
 
 @app.route('/api/customers')
 def customers() -> list:
     sql = "SELECT * FROM customers"
     db.execute(sql)
-    customers_tuple: tuple = db.fetchall()
+    customers_list: list = list(db.fetchall())
 
     header_data = []
     for header in db.description:
         header_data.append(header[0])
 
-    new_data = []
-    for customer in customers_tuple:
-        new_data.append(dict(zip(header_data, customer)))
+    all_customers_data = []
+    for customer in customers_list:
+        all_customers_data.append(dict(zip(header_data, customer)))
 
-    return jsonify(new_data)
+    return jsonify(all_customers_data)
 
 
 @app.route('/api/orders')
 def orders() -> list:
     sql = "SELECT * FROM orders"
     db.execute(sql)
-    orders_tuple: tuple = db.fetchall()
+    orders_list: list = list(db.fetchall())
 
     header_data = []
     for header in db.description:
         header_data.append(header[0])
 
-    new_data = []
-    for order in orders_tuple:
-        new_data.append(dict(zip(header_data, order)))
+    all_orders_data = []
+    for order in orders_list:
+        all_orders_data.append(dict(zip(header_data, order)))
 
-    return jsonify(new_data)
+    return jsonify(all_orders_data)
 
 
 @app.route('/api/order/<int:order_num>')
@@ -140,7 +156,6 @@ def order_det(order_num) -> dict:
     """
     db.execute(sql, order_num)
     orders_det: list = list(db.fetchall())
-
 
     header_data = []
     for header in db.description:
@@ -252,9 +267,6 @@ def get_customer_orders(customer_num) -> list:
 
     return jsonify(new_data)
 
-
-# for a customer get all orders
-# for a given order get its details
 # for an office get all employees
 # for an employee get all the sales they've made
 # for a given employee get all its superiors and subordinates
