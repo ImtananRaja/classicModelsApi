@@ -1,7 +1,8 @@
-from flask import Flask, jsonify
-from config.connection import db, hello_string
+from flask import Flask, jsonify, request, abort, redirect, url_for
+from config.connection import db
 import datetime
 import decimal
+from functools import wraps
 
 app = Flask(__name__)
 
@@ -13,9 +14,43 @@ TODO: factor out logic for dealing with dates and decimals and any other thing t
 """
 
 
+# The actual decorator function
+def require_app_api_key(view_function):
+    """
+    Decorator function to authenticate the api request with valid key
+    :param view_function:
+    :return:
+    """
+
+    @wraps(view_function)
+    # the new, post-decoration function. Note *args and **kwargs here.
+    def decorated_function(*args, **kwargs):
+        print(request.headers)
+        # get the key from the database if exists ( using the value passed from the headers 'x-api-key' )
+        # check if the key is also valid and not suspended
+        # if suspended then abort on the request
+        # if not valid then reroute to get new key
+        # NOTE: everytime this is called update the api key table to set the keys to invalid which pass the expiry_date
+        if request.headers.get('x-api-key') and request.headers.get('x-api-key') == 'GETKEYFROMDB':
+            return view_function(*args, **kwargs)
+        else:
+            #return redirect('/api/api_key') or
+            return redirect(url_for('api_key'))
+            #abort(401)
+
+    return decorated_function
+
+
 @app.route('/')
+@require_app_api_key
 def home():
-    return jsonify("welcome to here")
+    return jsonify("welcome to the classic models api")
+
+
+@app.route('/api/api_key')
+def api_key():
+    return "Randomly generated API_KEY"
+
 
 
 @app.route('/api/payments')
@@ -164,8 +199,8 @@ def orders() -> list:
         header_data.append(header[0])
 
     all_orders_data = []
-    for order in orders_list:
-        all_orders_data.append(dict(zip(header_data, order)))
+    for order_item in orders_list:
+        all_orders_data.append(dict(zip(header_data, order_item)))
 
     return jsonify(all_orders_data)
 
@@ -201,11 +236,11 @@ def order_det(order_num) -> dict:
     for header in db.description:
         header_data.append(header[0])
 
-    order_details = []
-    for order in orders_det:
-        order_details.append(dict(zip(header_data, order)))
+    order_details_list = []
+    for order_item in orders_det:
+        order_details_list.append(dict(zip(header_data, order_item)))
 
-    return jsonify(order_details)
+    return jsonify(order_details_list)
 
 
 """
