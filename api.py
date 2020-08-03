@@ -18,12 +18,52 @@ def home():
     return jsonify("welcome to here")
 
 
-# get all offices
-# get all orders
-# get all orderdetails
-# get all payments
-# get all productlines
-# get all customers
+@app.route('/api/payments')
+def payments() -> list:
+    """Getting all the payments details
+    :return: json object of payments
+    """
+    sql = "SELECT * FROM payments"
+    db.execute(sql)
+    payments_list: list = list(db.fetchall())
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    all_payments_data = []
+    for payment in payments_list:
+        payment_list: list = list(payment)
+
+        for index, item in enumerate(payment_list):
+            if isinstance(item, decimal.Decimal):
+                payment_list[index]: str = str(item)
+            if isinstance(item, datetime.date):
+                payment_list[index]: str = item.strftime("%d/%m/%Y")
+        all_payments_data.append(dict(zip(header_data, payment_list)))
+
+    return jsonify(all_payments_data)
+
+
+@app.route('/api/productlines')
+def product_lines() -> list:
+    """Getting all the product lines details
+    :return: json object of product lines
+    """
+    sql = "SELECT * FROM productlines"
+    db.execute(sql)
+    product_lines_list: list = list(db.fetchall())
+
+    header_data = []
+    for header in db.description:
+        header_data.append(header[0])
+
+    all_product_line_data = []
+    for product_line in product_lines_list:
+        all_product_line_data.append(dict(zip(header_data, product_line)))
+
+    return jsonify(all_product_line_data)
+
 
 @app.route('/api/employees')
 def employees() -> list:
