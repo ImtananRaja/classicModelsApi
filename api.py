@@ -294,49 +294,68 @@ def order_det(order_num) -> dict:
     return jsonify(order_details_list)
 
 
-"""
-Get Employee details
-
-@params:
-1) Employee Number - should be unique
-
-@returns:
-1) Dictionary with employee details
-"""
-
-
-@app.route('/api/employee/<int:emp_num>')
+@app.route('/api/employee/<int:emp_num>', methods=['GET', 'POST'])
 @require_app_api_key
 def get_employee_det(emp_num) -> dict:
-    """
-    returns json object of employee details
-    :param emp_num: int
-    :return: json object of employee details
-    """
-    sql = "SELECT * FROM employees WHERE employeeNumber = %s"
-    db.execute(sql, emp_num)
-    employee_details: tuple = db.fetchone()
-    header_data = []
-    for header in db.description:
-        header_data.append(header[0])
-    final_data = dict(zip(tuple(header_data), employee_details))
-    return jsonify(final_data)
+    if request.method == 'GET':
+        """
+        returns json object of employee details
+        :param emp_num: int
+        :return: json object of employee details
+        """
+        sql = "SELECT * FROM employees WHERE employeeNumber = %s"
+        db.execute(sql, emp_num)
+        employee_details: tuple = db.fetchone()
+        header_data = []
+        for header in db.description:
+            header_data.append(header[0])
+        final_data = dict(zip(tuple(header_data), employee_details))
+        return jsonify(final_data)
 
+    if request.method == 'POST':
+        # get the action type to make the right choice
+        action_type = request.get_json().get('action_type')
 
-"""
-Get all Customers for an Employee
+        # check if the employee is a valid employee
+        if action_type == 'update':
+            sql_update = ""
+            employee_update = request.get_json()
+            for key, value in employee_update.get('content').items():
+                sql_update = sql_update + f" {key} = '{value}',"
 
-@param:
-1) Employee Number - should be unique
+            update_employee_query = f"UPDATE employees SET{sql_update}"[:-1] + " WHERE employeeNumber = %s"
+            try:
+                db.execute(update_employee_query, employee_update.get('employee_id'))
+            except Exception as err:
+                raise err
 
-@returns:
-1) List of Customers details for the employee
-"""
+            return redirect(url_for('get_employee_det', emp_num=employee_update.get('employee_id'), _method="GET"))
+
+        if action_type == 'delete':
+            # just change last action to delete
+            return jsonify("deleted")
+        if action_type == 'undelete':
+            # just update the last action to undelete
+            return jsonify("undeleted")
+        if action_type == 'erase':
+            # audit the deletion before actually removing
+            return jsonify("erased")
+
+        return jsonify(f"Unknown action type {action_type}")
 
 
 @app.route('/api/employee/<int:emp_num>/customers')
 @require_app_api_key
 def get_employee_customers(emp_num) -> list:
+    """
+    Get all Customers for an Employee
+
+    @param:
+    1) Employee Number - should be unique
+
+    @returns:
+    1) List of Customers details for the employee
+    """
     sql = """
     SELECT customers.* 
     FROM customers 
@@ -400,28 +419,9 @@ def get_customer_orders(customer_num) -> list:
 # for an employee get all the sales they've made
 # for a given employee get all its superiors and subordinates
 
-#
+# Need to create post methods for the api_keys generation
+# generate_api_key
+# enter new employee details
+# enter new officee details etc
 
-
-# @app.route('/api/cards/')
-# def api_card_list():
-#     return jsonify(db)
-#
-#
-# @app.route('/api/card/<int:index>')
-# def api_card_detail(index):
-#     try:
-#         return db[index]
-#     except IndexError:
-#         abort(404)
-
-
-# def row2dict(row):
-#     d = {}
-#     for column in row.__table__.columns:
-#         print(row)
-#         print(column)
-#         d[row.employeeNumber] = row.firstName
-#         d[row.employeeNumber] = row.lastName
-#
-#     return d
+# place an order for a customer
