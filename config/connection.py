@@ -9,7 +9,8 @@ def _connect() -> object:
                                     password="password",
                                     database="classicmodels",
                                     charset="utf8mb4",
-                                    port=3307)
+                                    port=3307,
+                                    autocommit=True)
     c = database_conn.cursor()
     return c
 

@@ -25,18 +25,60 @@ def require_app_api_key(view_function):
     @wraps(view_function)
     # the new, post-decoration function. Note *args and **kwargs here.
     def decorated_function(*args, **kwargs):
-        print(request.headers)
-        # get the key from the database if exists ( using the value passed from the headers 'x-api-key' )
-        # check if the key is also valid and not suspended
-        # if suspended then abort on the request
-        # if not valid then reroute to get new key
+        if 'x-api-key' not in request.headers:
+            abort(401)
+
         # NOTE: everytime this is called update the api key table to set the keys to invalid which pass the expiry_date
-        if request.headers.get('x-api-key') and request.headers.get('x-api-key') == 'GETKEYFROMDB':
+        # NOTE: also set up commit and rollback
+        try:
+            # Fix this query some problem here
+            expiry_api_sql = """
+            UPDATE apikeys set AKvalid = %s WHERE AKexpiryDate < NOW()
+            """
+            db.execute(expiry_api_sql, 'No')
+        except Exception as err:
+            app.logger.exception(err)
+            return "An error occured"
+
+        api_sql = """
+        SELECT AKapi, 
+               AKvalid, 
+               AKsuspended, 
+               AKexpiryDate 
+        FROM   apikeys
+        WHERE  AKapi = %s
+        AND    AKlastAction != %s
+        """
+
+        # get the key from the database if exists ( using the value passed from the headers 'x-api-key' )
+        req_api_key = request.headers.get('x-api-key')
+        db.execute(api_sql, (req_api_key, "Deleted"))
+        api_key_details = db.fetchone()
+
+        # No data exists in the database for this key
+        if api_key_details is None:
+            return redirect(url_for('api_key'))
+
+        header_data = []
+        for header in db.description:
+            header_data.append(header[0])
+        api_data = dict(zip(tuple(header_data), api_key_details))
+
+        # Suspended api_key (New email address is needed)
+        if api_data['AKsuspended'] == "Yes" or api_data['AKsuspended'] is None:
+            abort(401)
+
+        # Invalid api_key (Expired etc.)
+        if api_data['AKvalid'] == "No" or api_data['AKvalid'] is None:
+            return redirect(url_for('api_key'))
+
+        if request.headers.get('x-api-key') and request.headers.get('x-api-key') == api_data['AKapi']:
             return view_function(*args, **kwargs)
         else:
-            #return redirect('/api/api_key') or
+            # return redirect('/api/api_key') or
+            # return with args passed such as the key is not right in the db
             return redirect(url_for('api_key'))
-            #abort(401)
+            # abort(401)
 
     return decorated_function
 
@@ -52,8 +94,8 @@ def api_key():
     return "Randomly generated API_KEY"
 
 
-
 @app.route('/api/payments')
+@require_app_api_key
 def payments() -> list:
     """Getting all the payments details
     :return: json object of payments
@@ -81,6 +123,7 @@ def payments() -> list:
 
 
 @app.route('/api/productlines')
+@require_app_api_key
 def product_lines() -> list:
     """Getting all the product lines details
     :return: json object of product lines
@@ -101,6 +144,7 @@ def product_lines() -> list:
 
 
 @app.route('/api/employees')
+@require_app_api_key
 def employees() -> list:
     """Getting all the employees details
     :return: json object of employees
@@ -121,6 +165,7 @@ def employees() -> list:
 
 
 @app.route('/api/offices')
+@require_app_api_key
 def offices() -> list:
     sql = "SELECT * FROM offices"
     db.execute(sql)
@@ -138,6 +183,7 @@ def offices() -> list:
 
 
 @app.route('/api/products')
+@require_app_api_key
 def products() -> list:
     sql = "SELECT * FROM products"
     db.execute(sql)
@@ -155,6 +201,7 @@ def products() -> list:
 
 
 @app.route('/api/orderdetails')
+@require_app_api_key
 def order_details() -> list:
     sql = "SELECT * FROM orderdetails"
     db.execute(sql)
@@ -172,6 +219,7 @@ def order_details() -> list:
 
 
 @app.route('/api/customers')
+@require_app_api_key
 def customers() -> list:
     sql = "SELECT * FROM customers"
     db.execute(sql)
@@ -189,6 +237,7 @@ def customers() -> list:
 
 
 @app.route('/api/orders')
+@require_app_api_key
 def orders() -> list:
     sql = "SELECT * FROM orders"
     db.execute(sql)
@@ -206,6 +255,7 @@ def orders() -> list:
 
 
 @app.route('/api/order/<int:order_num>')
+@require_app_api_key
 def order(order_num) -> dict:
     sql = "SELECT * FROM orders WHERE orderNumber = %s"
     db.execute(sql, order_num)
@@ -225,6 +275,7 @@ def order(order_num) -> dict:
 
 
 @app.route('/api/order/<int:order_num>/details')
+@require_app_api_key
 def order_det(order_num) -> dict:
     sql = """
     SELECT * FROM orderdetails WHERE orderNumber = %s
@@ -255,6 +306,7 @@ Get Employee details
 
 
 @app.route('/api/employee/<int:emp_num>')
+@require_app_api_key
 def get_employee_det(emp_num) -> dict:
     """
     returns json object of employee details
@@ -283,6 +335,7 @@ Get all Customers for an Employee
 
 
 @app.route('/api/employee/<int:emp_num>/customers')
+@require_app_api_key
 def get_employee_customers(emp_num) -> list:
     sql = """
     SELECT customers.* 
@@ -309,6 +362,7 @@ def get_employee_customers(emp_num) -> list:
 
 
 @app.route('/api/customer/<int:customer_num>/orders')
+@require_app_api_key
 def get_customer_orders(customer_num) -> list:
     """
     Get all orders for an customer given a customer number
